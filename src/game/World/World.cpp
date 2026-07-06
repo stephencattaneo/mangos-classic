@@ -701,6 +701,11 @@ void World::LoadConfigSettings(bool reload)
     setConfigMinMax(CONFIG_FLOAT_GHOST_RUN_SPEED_BG,      "Death.Ghost.RunSpeed.Battleground", 1.0f, 0.1f, 10.0f);
 
     setConfig(CONFIG_FLOAT_LEASH_RADIUS, "LeashRadius", 30.f);
+
+    // Custom player movement tuning (players only; absolute world-units, vanilla run = 7.0,
+    // vanilla epic mount = 14.0). Consumed in Unit::UpdateSpeed().
+    setConfigMinMax(CONFIG_FLOAT_SPEED_PLAYER_RUN,  "PlayerSpeed.Run", 9.5f, 1.0f, 30.0f);
+    setConfigMinMax(CONFIG_FLOAT_SPEED_MOUNT_EPIC,  "PlayerSpeed.MountEpic", 20.0f, 1.0f, 60.0f);
     setConfigMin(CONFIG_UINT32_CREATURE_RESPAWN_AGGRO_DELAY, "CreatureRespawnAggroDelay", 5000, 0);
     setConfig(CONFIG_UINT32_CREATURE_PICKPOCKET_RESTOCK_DELAY, "CreaturePickpocketRestockDelay", 600);
 

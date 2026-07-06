@@ -8421,14 +8421,14 @@ void Unit::UpdateSpeed(UnitMoveType mtype, bool forced, float ratio)
     {
         if (IsMounted())
         {
-            // Epic (lvl-60, +100%) mounts run at 20.0 instead of the vanilla 14.0.
+            // Epic (lvl-60, +100%) mounts run at PlayerSpeed.MountEpic instead of the vanilla 14.0.
             if (main_speed_mod >= 100)
-                speed *= 20.0f / 14.0f;
+                speed *= sWorld.getConfig(CONFIG_FLOAT_SPEED_MOUNT_EPIC) / 14.0f;
         }
         else
         {
-            // On foot, players run at 9.5 instead of the vanilla 7.0.
-            speed *= 9.5f / 7.0f;
+            // On foot, players run at PlayerSpeed.Run instead of the vanilla 7.0.
+            speed *= sWorld.getConfig(CONFIG_FLOAT_SPEED_PLAYER_RUN) / 7.0f;
         }
     }
 
