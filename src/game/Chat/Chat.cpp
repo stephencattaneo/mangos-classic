@@ -3497,8 +3497,10 @@ AccountTypes CliHandler::GetAccessLevel() const
 
 bool CliHandler::isAvailable(ChatCommand const& cmd) const
 {
-    // skip non-console commands in console case
-    if (!cmd.AllowConsole)
+    // skip non-console commands in console case, unless an "@name" target override is active:
+    // that prefix supplies the selection these commands need, so allow them from console/SOAP
+    // (see ChatHandler::ParseCommands / m_cliTargetGuid).
+    if (!cmd.AllowConsole && !m_cliTargetGuid)
         return false;
 
     // normal case
