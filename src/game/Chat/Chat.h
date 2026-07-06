@@ -861,6 +861,7 @@ class ChatHandler
         void SetSentErrorMessage(bool val) { sentErrorMessage = val;};
     private:
         WorldSession* m_session;                            // != nullptr for chat command call and nullptr for CLI command
+        ObjectGuid m_cliTargetGuid;                         // set by a leading "@name" command prefix; overrides selection (see ParseCommands)
 
         // common global flag
         static bool load_command_table;

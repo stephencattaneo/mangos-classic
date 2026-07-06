@@ -1516,6 +1516,31 @@ bool ChatHandler::ParseCommands(const char* text)
     MANGOS_ASSERT(text);
     MANGOS_ASSERT(*text);
 
+    /// optional target prefix: "@Name <command>" runs the command as if Name were the selected
+    /// target. Lets name-target any selection-based command from the console/SOAP (where there is
+    /// no selection). Console/SOAP only; online players only; resolved into m_cliTargetGuid,
+    /// honored by getSelected*.
+    if (!m_session && text[0] == '@')
+    {
+        char const* rest = text + 1;
+        std::string name;
+        while (*rest && *rest != ' ')
+            name += *rest++;
+        while (*rest == ' ')
+            ++rest;
+
+        if (!name.empty() && *rest && normalizePlayerName(name))
+        {
+            m_cliTargetGuid = sObjectMgr.GetPlayerGuidByName(name);
+            if (!m_cliTargetGuid)
+            {
+                SendSysMessage(LANG_PLAYER_NOT_FOUND);
+                return false;
+            }
+            text = rest;
+        }
+    }
+
     /// chat case (.command or !command format)
     if (m_session)
     {
@@ -2141,6 +2166,10 @@ bool ChatHandler::CheckEscapeSequences(const char* message)
 
 Player* ChatHandler::getSelectedPlayer() const
 {
+    // "@name" command prefix overrides selection (online players only); see ParseCommands.
+    if (m_cliTargetGuid)
+        return sObjectMgr.GetPlayer(m_cliTargetGuid);
+
     if (!m_session)
         return nullptr;
 
@@ -2154,6 +2183,10 @@ Player* ChatHandler::getSelectedPlayer() const
 
 Unit* ChatHandler::getSelectedUnit(bool self) const
 {
+    // "@name" command prefix overrides selection (online players only); see ParseCommands.
+    if (m_cliTargetGuid)
+        return sObjectMgr.GetPlayer(m_cliTargetGuid);
+
     if (!m_session)
         return nullptr;
 
