@@ -8416,6 +8416,22 @@ void Unit::UpdateSpeed(UnitMoveType mtype, bool forced, float ratio)
         }
     }
 
+    // Custom server speed tuning (players only; speed is a rate over baseMoveSpeed[MOVE_RUN] = 7.0).
+    if (mtype == MOVE_RUN && GetTypeId() == TYPEID_PLAYER)
+    {
+        if (IsMounted())
+        {
+            // Epic (lvl-60, +100%) mounts run at 20.0 instead of the vanilla 14.0.
+            if (main_speed_mod >= 100)
+                speed *= 20.0f / 14.0f;
+        }
+        else
+        {
+            // On foot, players run at 9.5 instead of the vanilla 7.0.
+            speed *= 9.5f / 7.0f;
+        }
+    }
+
     SetSpeedRate(mtype, speed * ratio, forced);
 }
 
