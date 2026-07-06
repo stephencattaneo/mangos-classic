@@ -1162,14 +1162,6 @@ bool ChatHandler::HandleMaxSkillCommand(char* /*args*/)
 
 bool ChatHandler::HandleSetSkillCommand(char* args)
 {
-    Player* target = getSelectedPlayer();
-    if (!target)
-    {
-        SendSysMessage(LANG_NO_CHAR_SELECTED);
-        SetSentErrorMessage(true);
-        return false;
-    }
-
     // number or [name] Shift-click form |color|Hskill:skill_id|h[name]|h|r
     char* skill_p = ExtractKeyFromLink(&args, "Hskill");
     if (!skill_p)
@@ -1183,9 +1175,24 @@ bool ChatHandler::HandleSetSkillCommand(char* args)
     if (!ExtractInt32(&args, level))
         return false;
 
-    int32 maxskill;
-    if (!ExtractOptInt32(&args, maxskill, target->GetSkillMaxPure(skill)))
+    // optional #max: consume the next token only if it is numeric,
+    // otherwise it is the optional trailing player name
+    int32 maxskill = -1;
+    {
+        char* mp = args;
+        while (*mp == ' ') ++mp;
+        if (*mp && (*mp == '-' || (*mp >= '0' && *mp <= '9')))
+            if (!ExtractInt32(&args, maxskill))
+                return false;
+    }
+
+    // optional trailing player name; if omitted, uses the selected player
+    Player* target;
+    if (!ExtractPlayerTarget(&args, &target))
         return false;
+
+    if (maxskill < 0)
+        maxskill = target->GetSkillMaxPure(skill);
 
     if (skill <= 0)
     {
@@ -1554,15 +1561,7 @@ bool ChatHandler::HandleLearnAllDefaultCommand(char* args)
 
 bool ChatHandler::HandleLearnCommand(char* args)
 {
-    Player* player = m_session->GetPlayer();
-    Player* targetPlayer = getSelectedPlayer();
-
-    if (!targetPlayer)
-    {
-        SendSysMessage(LANG_PLAYER_NOT_FOUND);
-        SetSentErrorMessage(true);
-        return false;
-    }
+    Player* player = m_session ? m_session->GetPlayer() : nullptr;
 
     // number or [name] Shift-click form |color|Hspell:spell_id|h[name]|h|r or Htalent form
     uint32 spell = ExtractSpellIdFromLink(&args);
@@ -1570,8 +1569,18 @@ bool ChatHandler::HandleLearnCommand(char* args)
         return false;
 
     bool allRanks = ExtractLiteralArg(&args, "all") != nullptr;
-    if (!allRanks && *args)                                 // can be fail also at syntax error
+
+    // optional trailing player name; if omitted, uses the selected player
+    Player* targetPlayer;
+    if (!ExtractPlayerTarget(&args, &targetPlayer))
         return false;
+
+    if (!targetPlayer)
+    {
+        SendSysMessage(LANG_PLAYER_NOT_FOUND);
+        SetSentErrorMessage(true);
+        return false;
+    }
 
     SpellEntry const* spellInfo = sSpellTemplate.LookupEntry<SpellEntry>(spell);
     if (!spellInfo || !SpellMgr::IsSpellValid(spellInfo, player))
