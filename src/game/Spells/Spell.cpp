@@ -2925,6 +2925,13 @@ void Spell::Prepare()
 {
     m_spellState = SPELL_STATE_CASTING;
 
+    // Custom server rule: casting a spell while mounted dismounts the player, then
+    // the cast proceeds. Reached only after CheckCast succeeded, so a failed cast
+    // leaves the mount up. Taxi flight was already rejected in CheckCast.
+    if (!m_IsTriggeredSpell && m_caster && m_caster->IsPlayer() && m_caster->GetMountID() &&
+            !IsPassiveSpell(m_spellInfo) && !m_spellInfo->HasAttribute(SPELL_ATTR_ALLOW_WHILE_MOUNTED))
+        m_caster->RemoveSpellsCausingAura(SPELL_AURA_MOUNTED);
+
     // Prepare data for triggers
     prepareDataForTriggerSystem();
 
@@ -4998,13 +5005,15 @@ SpellCastResult Spell::CheckCast(bool strict)
         return SPELL_FAILED_DONT_REPORT;
     }
 
-    // not let players cast spells at mount (and let do it to creatures)
+    // Custom server rule: casting while mounted dismounts the player instead of
+    // blocking (the actual dismount happens in Spell::Prepare, after all CheckCast
+    // checks pass, so a cast that fails for another reason leaves the mount up).
+    // Taxi flight is still a hard block.
     if (m_trueCaster->IsPlayer() && m_caster->GetMountID() && !m_IsTriggeredSpell &&
             !IsPassiveSpell(m_spellInfo) && !m_spellInfo->HasAttribute(SPELL_ATTR_ALLOW_WHILE_MOUNTED))
     {
         if (m_caster->IsTaxiFlying())
             return SPELL_FAILED_NOT_ON_TAXI;
-        return SPELL_FAILED_NOT_MOUNTED;
     }
 
     // always (except passive spells) check items (focus object can be required for any type casts)
