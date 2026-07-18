@@ -132,6 +132,16 @@ uint32 GetSpellCastTime(SpellEntry const* spellInfo, WorldObject* caster, Spell*
                 if (Item* nonTrade = my_trade->GetTraderData()->GetItem(TRADE_SLOT_NONTRADED))
                     if (nonTrade == spell->m_targets.getItemTarget())
                         return 0;
+
+        // --- Custom server rule: fast recipe learning & crafting ---
+        // Learning a recipe (a LEARN_SPELL cast from a recipe/book item) -> 1.0s
+        if (spell->GetCastItem())
+            for (uint32 i = 0; i < MAX_EFFECT_INDEX; ++i)
+                if (spellInfo->Effect[i] == SPELL_EFFECT_LEARN_SPELL)
+                    return 1000;
+        // Crafting a tradeskill item -> 1.5s
+        if (spellInfo->HasAttribute(SPELL_ATTR_IS_TRADESKILL))
+            return 1500;
     }
 
     SpellCastTimesEntry const* spellCastTimeEntry = sSpellCastTimesStore.LookupEntry(spellInfo->CastingTimeIndex);
