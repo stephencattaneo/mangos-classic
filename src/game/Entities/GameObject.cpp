@@ -28,6 +28,8 @@
 #include "World/World.h"
 #include "Database/DatabaseEnv.h"
 #include "Loot/LootMgr.h"
+#include "Entities/ItemPrototype.h"
+#include "Tools/Formulas.h"
 #include "Grids/GridNotifiers.h"
 #include "Grids/GridNotifiersImpl.h"
 #include "Grids/CellImpl.h"
@@ -43,6 +45,7 @@
 #include "World/WorldState.h"
 #include <G3D/Box.h>
 #include <G3D/CoordinateFrame.h>
+#include <algorithm>
 #include <G3D/Quat.h>
 #include "Entities/Transports.h"
 
@@ -1752,6 +1755,40 @@ void GameObject::Use(Unit* user, SpellEntry const* spellInfo)
 
                         WorldPacket data(SMSG_FISH_ESCAPED, 0);
                         player->GetSession()->SendPacket(data);
+                    }
+
+                    // buff fishing: reward a real catch with XP scaled by the rarity of the
+                    // haul. Any catch is worth a couple same-level kills; a rare catch (reagent
+                    // fish such as Stonescale Eel, or a high-value trophy fish / treasure) is
+                    // worth up to ~8. Fishing holes stash their loot on their own object.
+                    if (success)
+                    {
+                        Loot* caughtLoot = fishingHole ? fishingHole->m_loot : m_loot;
+                        if (caughtLoot)
+                        {
+                            uint32 const lvl = player->GetLevel();
+                            float const oneKill = MaNGOS::XP::BaseGain(lvl, lvl); // one same-level mob
+                            float kills = 2.0f;                                  // baseline per catch
+                            LootItemList caughtItems;
+                            caughtLoot->GetLootItemsListFor(player, caughtItems);
+                            for (LootItem* item : caughtItems)
+                            {
+                                ItemPrototype const* proto = item ? item->itemProto : nullptr;
+                                if (!proto)
+                                    continue;
+
+                                float bonus = 0.0f;
+                                if (proto->Class == ITEM_CLASS_REAGENT)          // rare reagent fish
+                                    bonus = 6.0f;
+                                else                                             // trophy fish / treasure by value
+                                    bonus = std::min(6.0f, proto->SellPrice / 60.0f);
+
+                                kills = std::max(kills, 2.0f + bonus);
+                            }
+
+                            uint32 const xp = uint32(oneKill * kills * sWorld.getConfig(CONFIG_FLOAT_RATE_XP_KILL));
+                            player->GiveXP(xp, nullptr);
+                        }
                     }
                     break;
                 }
