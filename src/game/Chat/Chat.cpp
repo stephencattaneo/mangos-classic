@@ -1041,6 +1041,39 @@ ChatCommand* ChatHandler::getCommandTable()
     return commandTable;
 }
 
+// Recursively collect console-usable command paths from a command table
+static void CollectConsoleCommandNames(ChatCommand* table, std::string const& prefix, std::vector<std::string>& out)
+{
+    for (uint32 i = 0; table[i].Name != nullptr; ++i)
+    {
+        if (!table[i].AllowConsole)
+            continue;
+
+        // the "" entry is the parent command's own handler, it adds no new path
+        std::string path = prefix;
+        if (table[i].Name[0])
+        {
+            if (!path.empty())
+                path += " ";
+            path += table[i].Name;
+        }
+
+        if (path.empty())
+            continue;
+
+        out.push_back(path);
+
+        if (table[i].ChildCommands)
+            CollectConsoleCommandNames(table[i].ChildCommands, path, out);
+    }
+}
+
+void ChatHandler::GetConsoleCommandNames(std::vector<std::string>& out)
+{
+    ChatHandler handler;                                    // uses the protected CLI constructor
+    CollectConsoleCommandNames(handler.getCommandTable(), "", out);
+}
+
 ChatHandler::ChatHandler(WorldSession* session) : m_session(session), sentErrorMessage(false)
 {}
 

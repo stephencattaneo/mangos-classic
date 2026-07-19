@@ -59,6 +59,15 @@ target_link_libraries(${EXECUTABLE_NAME}
   cmangos-compile-option-interface
 )
 
+if(UNIX)
+  # readline powers the interactive console (history, line editing, tab completion)
+  include(FindReadline)
+  FIND_READLINE()
+  target_include_directories(${EXECUTABLE_NAME} PRIVATE ${READLINE_INCLUDE_DIR})
+  target_link_libraries(${EXECUTABLE_NAME} ${READLINE_LIBRARY})
+  target_compile_definitions(${EXECUTABLE_NAME} PRIVATE USE_READLINE)
+endif()
+
 if(WIN32)
   if(MSVC)
     target_link_libraries(${EXECUTABLE_NAME}

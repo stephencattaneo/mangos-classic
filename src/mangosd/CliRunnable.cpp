@@ -34,6 +34,21 @@
 #include "Entities/Player.h"
 #include "Chat/Chat.h"
 
+// readline drives the console only on unix and only when stdin is a terminal,
+// otherwise the plain fgets path below is used (piped stdin, docker run -T, ...)
+#if defined(USE_READLINE) && defined(__unix__)
+#define MANGOS_READLINE 1
+
+#include <readline/readline.h>
+#include <readline/history.h>
+#include <unistd.h>
+#include <algorithm>
+#include <vector>
+
+static bool s_useReadline = false;                          // set once at CLI start from isatty()
+static std::vector<std::string> s_consoleCommands;          // console command paths, built once
+#endif
+
 void utf8print(const char* str)
 {
 #if PLATFORM == PLATFORM_WINDOWS
@@ -59,6 +74,17 @@ void utf8print(const char* str)
 
 void commandFinished(bool /*sucess*/)
 {
+#ifdef MANGOS_READLINE
+    if (s_useReadline)
+    {
+        // readline owns the prompt, redraw it (plus any half-typed input) after the command output
+        rl_on_new_line();
+        rl_forced_update_display();
+        fflush(stdout);
+        return;
+    }
+#endif
+
     printf("mangos>");
     fflush(stdout);
 }
@@ -597,6 +623,104 @@ int kb_hit_return()
 }
 #endif
 
+#ifdef MANGOS_READLINE
+
+/// Completion candidate generator: matches the whole line typed so far against the
+/// console command paths, so that multi word commands ("ban ac<TAB>") complete too.
+static char* cliCommandGenerator(const char* text, int state)
+{
+    static size_t index;
+    static std::string prefix;
+
+    if (state == 0)                                         // first call for this completion
+    {
+        index = 0;
+        prefix = text ? text : "";
+    }
+
+    while (index < s_consoleCommands.size())
+    {
+        std::string const& command = s_consoleCommands[index++];
+        if (command.compare(0, prefix.size(), prefix) == 0)
+            return strdup(command.c_str());                 // readline frees this
+    }
+
+    return nullptr;
+}
+
+static char** cliCompletion(const char* text, int /*start*/, int /*end*/)
+{
+    rl_attempted_completion_over = 1;                       // never fall back to filename completion
+    rl_completion_append_character = ' ';
+    return rl_completion_matches(text, &cliCommandGenerator);
+}
+
+/// Called by readline once a complete line has been entered
+static void cliLineHandler(char* line)
+{
+    if (!line)                                              // EOF (ctrl-D or closed stdin)
+    {
+        printf("\n");
+        World::StopNow(SHUTDOWN_EXIT_CODE);
+        return;
+    }
+
+    // completion appends a space, strip trailing whitespace so the command parser sees no args
+    size_t len = strlen(line);
+    while (len && (line[len - 1] == ' ' || line[len - 1] == '\t'))
+        line[--len] = '\0';
+
+    if (*line)
+    {
+        add_history(line);
+
+        std::string command;
+        if (consoleToUtf8(line, command))                   // convert from console encoding to utf8
+            sWorld.QueueCliCommand(new CliCommandHolder(0, SEC_CONSOLE, command.c_str(), &utf8print, &commandFinished));
+    }
+
+    free(line);
+}
+
+static std::string cliHistoryFile()
+{
+    char const* home = getenv("HOME");
+    return home ? std::string(home) + "/.mangosd_history" : std::string();
+}
+
+static void cliReadlineInit()
+{
+    ChatHandler::GetConsoleCommandNames(s_consoleCommands);
+    std::sort(s_consoleCommands.begin(), s_consoleCommands.end());
+
+    rl_readline_name = const_cast<char*>("mangosd");
+    rl_catch_signals = 0;                                   // the server installs its own signal handlers
+
+    // treat the whole line as a single completion word so that multi word commands complete
+    static char noBreakChars[] = "";
+    rl_completer_word_break_characters = noBreakChars;
+    rl_attempted_completion_function = &cliCompletion;
+
+    stifle_history(500);
+
+    std::string const histFile = cliHistoryFile();
+    if (!histFile.empty())
+        read_history(histFile.c_str());
+
+    rl_callback_handler_install("mangos>", &cliLineHandler);
+}
+
+static void cliReadlineShutdown()
+{
+    rl_callback_handler_remove();
+
+    std::string const histFile = cliHistoryFile();
+    if (!histFile.empty())
+        write_history(histFile.c_str());
+}
+
+#endif
+
 /// %Thread start
 void CliRunnable::run()
 {
@@ -610,6 +734,32 @@ void CliRunnable::run()
 
     if (sConfig.GetBoolDefault("BeepAtStart", true))
         printf("\a");                                       // \a = Alert
+
+#ifdef MANGOS_READLINE
+    s_useReadline = isatty(STDIN_FILENO) != 0;
+
+    if (s_useReadline)
+    {
+        // readline prints the prompt itself and keeps stdin blocking, the select()
+        // poll below still drives it so that shutdown never waits for a keypress
+        cliReadlineInit();
+
+        while (!World::IsStopped())
+        {
+            fflush(stdout);
+
+            if (kb_hit_return())
+                rl_callback_read_char();
+            else
+                std::this_thread::sleep_for(std::chrono::nanoseconds(100000));
+        }
+
+        cliReadlineShutdown();
+
+        WorldDatabase.ThreadEnd();                          // free mySQL thread resources
+        return;
+    }
+#endif
 
     // print this here the first time
     // later it will be printed after command queue updates

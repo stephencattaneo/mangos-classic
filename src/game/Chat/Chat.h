@@ -25,7 +25,9 @@
 #include "Entities/ObjectGuid.h"
 
 #include <functional>
+#include <string>
 #include <utility>
+#include <vector>
 
 struct AreaTrigger;
 struct AreaTriggerEntry;
@@ -163,6 +165,9 @@ class ChatHandler
         bool ExtractPlayerTarget(char** args, Player** player, ObjectGuid* player_guid = nullptr, std::string* player_name = nullptr);
 
         WorldSession* GetSession() const { return m_session; }
+
+        // Collect full space-separated paths of all console-usable commands (for CLI tab completion)
+        static void GetConsoleCommandNames(std::vector<std::string>& out);
     protected:
         explicit ChatHandler() : m_session(nullptr), sentErrorMessage(false)
         {}      // for CLI subclass
