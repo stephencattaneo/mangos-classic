@@ -1367,6 +1367,13 @@ Visibility.AIRelocationNotifyDelay = 1000
 #        XP rates
 #        Default: 1
 #
+#    Group.EvenXPSplit
+#        Custom: split group kill XP evenly among the XP-eligible (non-grey) members instead of
+#        weighting each member's share by level. The group size bonus still applies, and members
+#        for whom the victim is grey still receive nothing.
+#        Default: 1 - (enabled, even split)
+#                 0 - (disabled, vanilla level-weighted split)
+#
 #    Rate.Rest.InGame
 #    Rate.Rest.Offline.InTavernOrCity
 #    Rate.Rest.Offline.InWilderness
@@ -1526,6 +1533,7 @@ Rate.Pet.XP.Kill = 1
 Rate.XP.Kill    = 1
 Rate.XP.Quest   = 1
 Rate.XP.Explore = 1
+Group.EvenXPSplit = 1
 Rate.Rest.InGame = 1
 Rate.Rest.Offline.InTavernOrCity = 1
 Rate.Rest.Offline.InWilderness = 1

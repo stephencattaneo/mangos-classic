@@ -360,6 +360,7 @@ enum eConfigBoolValues
     CONFIG_BOOL_PRELOAD_MMAP_TILES,
     CONFIG_BOOL_REGEN_ZONE_AREA_ON_STARTUP,
     CONFIG_BOOL_OFFHAND_FISH_GUARANTEED_MONEY,  // custom: level-scaled guaranteed coin floor while a pound-fish trophy is held in the off-hand
+    CONFIG_BOOL_GROUP_EVEN_XP_SPLIT,   // custom: split group kill XP evenly among eligible members instead of by level
     CONFIG_BOOL_VALUE_COUNT
 };
 

@@ -33,6 +33,7 @@
 #include "Maps/MapPersistentStateMgr.h"
 #include "Spells/SpellAuras.h"
 #include "BattleGround/BattleGroundMgr.h"
+#include "World/World.h"
 #ifdef BUILD_DEPRECATED_PLAYERBOT
 #include "PlayerBot/Base/PlayerbotMgr.h"
 #endif
@@ -600,7 +601,7 @@ void Group::SetTargetIcon(uint8 id, ObjectGuid targetGuid)
     BroadcastPacket(data, true);
 }
 
-static void GetDataForXPAtKill_helper(Player* player, Unit const* victim, uint32& sum_level, Player*& member_with_max_level, Player*& not_gray_member_with_max_level)
+static void GetDataForXPAtKill_helper(Player* player, Unit const* victim, uint32& sum_level, uint32& not_gray_count, Player*& member_with_max_level, Player*& not_gray_member_with_max_level)
 {
     const uint32 level = player->GetLevel();
 
@@ -612,11 +613,13 @@ static void GetDataForXPAtKill_helper(Player* player, Unit const* victim, uint32
     if (MaNGOS::XP::IsTrivialLevelDifference(level, victim->GetLevelForTarget(player)))
         return;
 
+    ++not_gray_count;                                       // custom: this member is XP-eligible
+
     if (!not_gray_member_with_max_level || not_gray_member_with_max_level->GetLevel() < level)
         not_gray_member_with_max_level = player;
 }
 
-void Group::GetDataForXPAtKill(Unit const* victim, uint32& count, uint32& sum_level, Player*& member_with_max_level, Player*& not_gray_member_with_max_level, Player* additional)
+void Group::GetDataForXPAtKill(Unit const* victim, uint32& count, uint32& sum_level, uint32& not_gray_count, Player*& member_with_max_level, Player*& not_gray_member_with_max_level, Player* additional)
 {
     for (GroupReference const* itr = GetFirstMember(); itr != nullptr; itr = itr->next())
     {
@@ -632,7 +635,7 @@ void Group::GetDataForXPAtKill(Unit const* victim, uint32& count, uint32& sum_le
             continue;
 
         ++count;
-        GetDataForXPAtKill_helper(member, victim, sum_level, member_with_max_level, not_gray_member_with_max_level);
+        GetDataForXPAtKill_helper(member, victim, sum_level, not_gray_count, member_with_max_level, not_gray_member_with_max_level);
     }
 
     if (additional)
@@ -640,7 +643,7 @@ void Group::GetDataForXPAtKill(Unit const* victim, uint32& count, uint32& sum_le
         if (additional->IsAtGroupRewardDistance(victim))    // at req. distance
         {
             ++count;
-            GetDataForXPAtKill_helper(additional, victim, sum_level, member_with_max_level, not_gray_member_with_max_level);
+            GetDataForXPAtKill_helper(additional, victim, sum_level, not_gray_count, member_with_max_level, not_gray_member_with_max_level);
         }
     }
 }
@@ -1483,7 +1486,7 @@ void Group::_homebindIfInstance(Player* player) const
     }
 }
 
-static void RewardGroupAtKill_helper(Player* pGroupGuy, Unit* pVictim, uint32 count, bool PvP, float group_rate, uint32 sum_level, bool is_dungeon, Player* not_gray_member_with_max_level, Player* member_with_max_level, uint32 xp)
+static void RewardGroupAtKill_helper(Player* pGroupGuy, Unit* pVictim, uint32 count, bool PvP, float group_rate, uint32 sum_level, uint32 not_gray_count, bool is_dungeon, Player* not_gray_member_with_max_level, Player* member_with_max_level, uint32 xp)
 {
     // honor can be in PvP and !PvP (racial leader) cases (for alive)
     if (pGroupGuy->IsAlive())
@@ -1495,24 +1498,33 @@ static void RewardGroupAtKill_helper(Player* pGroupGuy, Unit* pVictim, uint32 co
         if (pVictim->GetTypeId() == TYPEID_UNIT)
         {
             Creature* creatureVictim = static_cast<Creature*>(pVictim);
-            float rate = group_rate * float(pGroupGuy->GetLevel()) / sum_level;
+
+            bool evenSplit = sWorld.getConfig(CONFIG_BOOL_GROUP_EVEN_XP_SPLIT) && not_gray_count > 0;
+
+            // custom: even split ignores member level and divides among XP-eligible (non-grey) members only,
+            // so grouping with an over-leveled player never reduces a low-level member's share.
+            float rate = evenSplit ? group_rate / float(not_gray_count)
+                                   : group_rate * float(pGroupGuy->GetLevel()) / sum_level;
 
             // if is in dungeon then all receive full reputation at kill
             // rewarded any alive/dead/near_corpse group member
             pGroupGuy->RewardReputation(creatureVictim, is_dungeon ? 1.0f : 1.0f / count);
 
+            bool xpEligible = evenSplit
+                ? !MaNGOS::XP::IsTrivialLevelDifference(pGroupGuy->GetLevel(), pVictim->GetLevelForTarget(pGroupGuy))
+                : (not_gray_member_with_max_level && pGroupGuy->GetLevel() <= not_gray_member_with_max_level->GetLevel());
+
             // XP updated only for alive group member
-            if (pGroupGuy->IsAlive() && not_gray_member_with_max_level &&
-                pGroupGuy->GetLevel() <= not_gray_member_with_max_level->GetLevel())
+            if (pGroupGuy->IsAlive() && not_gray_member_with_max_level && xpEligible)
             {
-                float itr_xp = (member_with_max_level == not_gray_member_with_max_level) ? xp * rate : (xp * rate * 0.5f) + 1.0f;
+                float itr_xp = (evenSplit || member_with_max_level == not_gray_member_with_max_level) ? xp * rate : (xp * rate * 0.5f) + 1.0f;
 
                 pGroupGuy->GiveXP((uint32)(std::round(itr_xp)), creatureVictim, group_rate);
                 if (Pet* pet = pGroupGuy->GetPet())
                 {
                     uint32 pet_xp = MaNGOS::XP::Gain(pet, creatureVictim);
-                    itr_xp = (member_with_max_level == not_gray_member_with_max_level) ? pet_xp * rate : (pet_xp * rate * 0.5f) + 1.0f;
-                    pet->GivePetXP((uint32)(std::round(itr_xp * rate)));
+                    itr_xp = (evenSplit || member_with_max_level == not_gray_member_with_max_level) ? pet_xp * rate : (pet_xp * rate * 0.5f) + 1.0f;
+                    pet->GivePetXP((uint32)(std::round(itr_xp)));
                 }
             }
 
@@ -1542,10 +1554,11 @@ void Group::RewardGroupAtKill(Unit* pVictim, Player* player_tap)
     // prepare data for near group iteration (PvP and !PvP cases)
     uint32 count = 0;
     uint32 sum_level = 0;
+    uint32 not_gray_count = 0;
     Player* member_with_max_level = nullptr;
     Player* not_gray_member_with_max_level = nullptr;
 
-    GetDataForXPAtKill(pVictim, count, sum_level, member_with_max_level, not_gray_member_with_max_level, player_tap);
+    GetDataForXPAtKill(pVictim, count, sum_level, not_gray_count, member_with_max_level, not_gray_member_with_max_level, player_tap);
 
     if (member_with_max_level)
     {
@@ -1570,14 +1583,14 @@ void Group::RewardGroupAtKill(Unit* pVictim, Player* player_tap)
             if (!pGroupGuy->IsAtGroupRewardDistance(pVictim))
                 continue;                               // member (alive or dead) or his corpse at req. distance
 
-            RewardGroupAtKill_helper(pGroupGuy, pVictim, count, PvP, group_rate, sum_level, is_dungeon, not_gray_member_with_max_level, member_with_max_level, xp);
+            RewardGroupAtKill_helper(pGroupGuy, pVictim, count, PvP, group_rate, sum_level, not_gray_count, is_dungeon, not_gray_member_with_max_level, member_with_max_level, xp);
         }
 
         if (player_tap)
         {
             // member (alive or dead) or his corpse at req. distance
             if (player_tap->IsAtGroupRewardDistance(pVictim))
-                RewardGroupAtKill_helper(player_tap, pVictim, count, PvP, group_rate, sum_level, is_dungeon, not_gray_member_with_max_level, member_with_max_level, xp);
+                RewardGroupAtKill_helper(player_tap, pVictim, count, PvP, group_rate, sum_level, not_gray_count, is_dungeon, not_gray_member_with_max_level, member_with_max_level, xp);
         }
     }
 }

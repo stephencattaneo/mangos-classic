@@ -199,7 +199,7 @@ class Group
         uint32 GetMembersCount() const { return m_memberSlots.size(); }
         uint32 GetMembersMinCount() const { return (IsBattleGroup() ? 1 : 2); }
         uint32 GetInviteesCount() const { return m_invitees.size(); }
-        void GetDataForXPAtKill(Unit const* victim, uint32& count, uint32& sum_level, Player*& member_with_max_level, Player*& not_gray_member_with_max_level, Player* additional = nullptr);
+        void GetDataForXPAtKill(Unit const* victim, uint32& count, uint32& sum_level, uint32& not_gray_count, Player*& member_with_max_level, Player*& not_gray_member_with_max_level, Player* additional = nullptr);
         uint8 GetMemberGroup(ObjectGuid guid) const
         {
             member_citerator mslot = _getMemberCSlot(guid);

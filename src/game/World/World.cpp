@@ -712,6 +712,11 @@ void World::LoadConfigSettings(bool reload)
     setConfigMin(CONFIG_FLOAT_OFFHAND_FISH_REP_RATE,   "OffhandFish.RepRate", 11.0f, 1.0f);
     setConfigMin(CONFIG_FLOAT_OFFHAND_FISH_MONEY_RATE, "OffhandFish.MoneyRate", 2.0f, 0.0f);
     setConfig(CONFIG_BOOL_OFFHAND_FISH_GUARANTEED_MONEY, "OffhandFish.GuaranteedMoney", true);
+
+    // Custom: split group kill XP evenly among XP-eligible members rather than weighting by
+    // member level. The group-size bonus (XP::xp_in_group_rate) still applies. 0 = vanilla.
+    setConfig(CONFIG_BOOL_GROUP_EVEN_XP_SPLIT, "Group.EvenXPSplit", true);
+
     setConfigMin(CONFIG_UINT32_CREATURE_RESPAWN_AGGRO_DELAY, "CreatureRespawnAggroDelay", 5000, 0);
     setConfig(CONFIG_UINT32_CREATURE_PICKPOCKET_RESTOCK_DELAY, "CreaturePickpocketRestockDelay", 600);
 
