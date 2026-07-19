@@ -63,6 +63,7 @@
 #include <limits>
 #include <cstdarg>
 #include <cstring>
+#include <cctype>
 
 INSTANTIATE_SINGLETON_1(ObjectMgr);
 
@@ -2838,6 +2839,28 @@ void ObjectMgr::LoadItemPrototypes()
 
     for (uint32 itr : notFoundOutfit)
     sLog.outErrorDb("Item (Entry: %u) not exist in `item_template` but referenced in `CharStartOutfit.dbc`", itr);
+
+    // custom: build the set of "N Pound <fish>" trophy items (name matches "^[0-9]+ Pound ").
+    // Used by the off-hand pound-fish bonuses (reputation / money). Rebuilt on every prototype load.
+    m_poundFishItems.clear();
+    for (uint32 i = 1; i < sItemStorage.GetMaxEntry(); ++i)
+    {
+        ItemPrototype const* proto = sItemStorage.LookupEntry<ItemPrototype>(i);
+        if (!proto)
+            continue;
+
+        char const* name = proto->Name1;
+        if (!name || !isdigit(static_cast<unsigned char>(name[0])))
+            continue;
+
+        char const* p = name;
+        while (isdigit(static_cast<unsigned char>(*p)))
+            ++p;
+
+        if (strncmp(p, " Pound ", 7) == 0)
+            m_poundFishItems.insert(proto->ItemId);
+    }
+    sLog.outString(">> Loaded %u pound-fish trophy items", uint32(m_poundFishItems.size()));
 
     sLog.outString(">> Loaded %u item prototypes", sItemStorage.GetRecordCount());
     sLog.outString();

@@ -706,6 +706,12 @@ void World::LoadConfigSettings(bool reload)
     // vanilla epic mount = 14.0). Consumed in Unit::UpdateSpeed().
     setConfigMinMax(CONFIG_FLOAT_SPEED_PLAYER_RUN,  "PlayerSpeed.Run", 9.5f, 1.0f, 30.0f);
     setConfigMinMax(CONFIG_FLOAT_SPEED_MOUNT_EPIC,  "PlayerSpeed.MountEpic", 20.0f, 1.0f, 60.0f);
+
+    // Custom: bonuses while a "N Pound <fish>" trophy is held in the off-hand (flat, do not scale with fish weight).
+    // A RepRate of 1.0 disables the reputation bonus; MoneyRate of 1.0 disables the coin multiplier.
+    setConfigMin(CONFIG_FLOAT_OFFHAND_FISH_REP_RATE,   "OffhandFish.RepRate", 11.0f, 1.0f);
+    setConfigMin(CONFIG_FLOAT_OFFHAND_FISH_MONEY_RATE, "OffhandFish.MoneyRate", 2.0f, 0.0f);
+    setConfig(CONFIG_BOOL_OFFHAND_FISH_GUARANTEED_MONEY, "OffhandFish.GuaranteedMoney", true);
     setConfigMin(CONFIG_UINT32_CREATURE_RESPAWN_AGGRO_DELAY, "CreatureRespawnAggroDelay", 5000, 0);
     setConfig(CONFIG_UINT32_CREATURE_PICKPOCKET_RESTOCK_DELAY, "CreaturePickpocketRestockDelay", 600);
 

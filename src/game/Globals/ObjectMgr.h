@@ -39,6 +39,7 @@
 #include <climits>
 #include <memory>
 #include <tuple>
+#include <unordered_set>
 #include <optional>
 
 class Group;
@@ -657,6 +658,10 @@ class ObjectMgr
         static CreatureDataAddon const* GetCreatureAddon(uint32 lowguid);           ///< Wrapper for sCreatureDataAddonStorage.LookupEntry
         static CreatureDataAddon const* GetCreatureTemplateAddon(uint32 entry);     ///< Wrapper for sCreatureInfoAddonStorage.LookupEntry
         static ItemPrototype const* GetItemPrototype(uint32 id);                    ///< Wrapper for sItemStorage.LookupEntry
+
+        // custom: fast O(1) test whether an item entry is a "N Pound <fish>" trophy (name matches "^[0-9]+ Pound ").
+        // The set is built once when item prototypes are loaded (see BuildPoundFishSet()).
+        bool IsPoundFish(uint32 entry) const { return m_poundFishItems.find(entry) != m_poundFishItems.end(); }
         static InstanceTemplate const* GetInstanceTemplate(uint32 map);             ///< Wrapper for sInstanceTemplate.LookupEntry
         static WorldTemplate const* GetWorldTemplate(uint32 map);                   ///< Wrapper for sWorldTemplate.LookupEntry
         static CreatureConditionalSpawn const* GetCreatureConditionalSpawn(uint32 lowguid); ///< Wrapper for sCreatureConditionalSpawnStore.LookupEntry
@@ -1263,6 +1268,7 @@ class ObjectMgr
         QuestAreaTriggerMap mQuestAreaTriggerMap;
         TavernAreaTriggerSet mTavernAreaTriggerSet;
         GameObjectForQuestSet mGameObjectForQuestSet;
+        std::unordered_set<uint32> m_poundFishItems;    // custom: entries whose item name matches "^[0-9]+ Pound "
         GossipTextMap       mGossipText;
         AreaTriggerMap      mAreaTriggers;
 

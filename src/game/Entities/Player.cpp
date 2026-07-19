@@ -6366,6 +6366,15 @@ int32 Player::CalculateReputationGain(ReputationSource source, int32 rep, int32 
         percent *= repRate;
     }
 
+    // custom: flat reputation multiplier while a "N Pound <fish>" trophy is held in the off-hand (does not scale with fish weight)
+    float offhandFishRate = sWorld.getConfig(CONFIG_FLOAT_OFFHAND_FISH_REP_RATE);
+    if (offhandFishRate != 1.0f)
+    {
+        Item* oh = GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_OFFHAND);
+        if (oh && sObjectMgr.IsPoundFish(oh->GetEntry()))
+            percent *= offhandFishRate;
+    }
+
     return int32(sWorld.getConfig(CONFIG_FLOAT_RATE_REPUTATION_GAIN) * rep * percent / 100.0f);
 }
 

@@ -287,6 +287,8 @@ enum eConfigFloatValues
     CONFIG_FLOAT_LEASH_RADIUS,
     CONFIG_FLOAT_SPEED_PLAYER_RUN,
     CONFIG_FLOAT_SPEED_MOUNT_EPIC,
+    CONFIG_FLOAT_OFFHAND_FISH_REP_RATE,     // custom: reputation multiplier while a pound-fish trophy is held in the off-hand
+    CONFIG_FLOAT_OFFHAND_FISH_MONEY_RATE,   // custom: creature coin multiplier while a pound-fish trophy is held in the off-hand
     CONFIG_FLOAT_VALUE_COUNT
 };
 
@@ -357,6 +359,7 @@ enum eConfigBoolValues
     CONFIG_BOOL_DISABLE_INSTANCE_RELOCATE,
     CONFIG_BOOL_PRELOAD_MMAP_TILES,
     CONFIG_BOOL_REGEN_ZONE_AREA_ON_STARTUP,
+    CONFIG_BOOL_OFFHAND_FISH_GUARANTEED_MONEY,  // custom: level-scaled guaranteed coin floor while a pound-fish trophy is held in the off-hand
     CONFIG_BOOL_VALUE_COUNT
 };
 

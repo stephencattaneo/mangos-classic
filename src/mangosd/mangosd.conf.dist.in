@@ -1408,6 +1408,22 @@ Visibility.AIRelocationNotifyDelay = 1000
 #        Lowest Reputation Gain rate from low level quest
 #        Default: 0.2
 #
+#    OffhandFish.RepRate
+#        Custom: flat reputation multiplier while a "N Pound <fish>" trophy is held in the off-hand.
+#        Does not scale with the fish weight. 1.0 disables the bonus.
+#        Default: 11 (+1000%)
+#
+#    OffhandFish.MoneyRate
+#        Custom: flat multiplier applied to creature coin drops while a "N Pound <fish>" trophy is
+#        held in the off-hand. Does not scale with the fish weight. 1.0 disables the multiplier.
+#        Default: 2
+#
+#    OffhandFish.GuaranteedMoney
+#        Custom: when enabled, kills made while holding a "N Pound <fish>" trophy in the off-hand
+#        drop at least a small level-scaled coin floor (5 copper per creature level), so even mobs
+#        that normally drop no coin now drop something.
+#        Default: 1 (enabled)
+#
 #    Rate.InstanceResetTime
 #        Multiplier for the number of days in between global raid/heroic instance resets.
 #        Default: 1
@@ -1525,6 +1541,9 @@ Rate.Talent = 1
 Rate.Reputation.Gain = 1
 Rate.Reputation.LowLevel.Kill    = 0.2
 Rate.Reputation.LowLevel.Quest   = 0.2
+OffhandFish.RepRate = 11
+OffhandFish.MoneyRate = 2
+OffhandFish.GuaranteedMoney = 1
 Rate.InstanceResetTime = 1
 SkillGain.Crafting = 1
 SkillGain.Defense = 1

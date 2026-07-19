@@ -1699,9 +1699,35 @@ Loot::Loot(Player* player, Creature* creature, LootType type) :
                 SetGroupLootRight(player);
             m_clientLootType = CLIENT_LOOT_CORPSE;
 
-            if ((creatureInfo->LootId && FillLoot(creatureInfo->LootId, LootTemplates_Creature, player, false)) || creatureInfo->MaxLootGold > 0)
+            // custom: off-hand "N Pound <fish>" trophy money bonus. When the looter holds one, the guaranteed
+            // coin floor makes even normally coinless mobs drop money, so we must enter the loot block for them too.
+            bool holdingPoundFish = false;
+            if (player)
+            {
+                Item* oh = player->GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_OFFHAND);
+                holdingPoundFish = oh && sObjectMgr.IsPoundFish(oh->GetEntry());
+            }
+            bool poundFishGuaranteedMoney = holdingPoundFish && sWorld.getConfig(CONFIG_BOOL_OFFHAND_FISH_GUARANTEED_MONEY);
+
+            bool hasLoot = (creatureInfo->LootId && FillLoot(creatureInfo->LootId, LootTemplates_Creature, player, false)) || creatureInfo->MaxLootGold > 0;
+            if (hasLoot || poundFishGuaranteedMoney)
             {
                 GenerateMoneyLoot(creatureInfo->MinLootGold, creatureInfo->MaxLootGold);
+
+                // custom: apply off-hand pound-fish coin multiplier and level-scaled guaranteed floor (flat, does not scale with fish weight)
+                if (holdingPoundFish)
+                {
+                    float moneyRate = sWorld.getConfig(CONFIG_FLOAT_OFFHAND_FISH_MONEY_RATE);
+                    if (moneyRate != 1.0f)
+                        m_gold = uint32(m_gold * moneyRate);
+                    if (poundFishGuaranteedMoney)
+                    {
+                        uint32 goldFloor = creature->GetLevel() * 5;    // 5 copper per creature level
+                        if (m_gold < goldFloor)
+                            m_gold = goldFloor;
+                    }
+                }
+
                 // loot may be anyway empty (loot may be empty or contain items that no one have right to loot)
                 bool isLootedForAll = IsLootedForAll();
                 if (isLootedForAll)
