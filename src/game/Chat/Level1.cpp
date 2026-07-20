@@ -925,10 +925,17 @@ bool ChatHandler::HandleTaxiCheatCommand(char* args)
 
     Player* chr = getSelectedPlayer();
     if (!chr)
-        chr = m_session->GetPlayer();
+        chr = m_session ? m_session->GetPlayer() : nullptr;
     // check online security
     else if (HasLowerSecurity(chr))
         return false;
+
+    if (!chr)
+    {
+        SendSysMessage(LANG_NO_CHAR_SELECTED);
+        SetSentErrorMessage(true);
+        return false;
+    }
 
     if (value)
     {

@@ -1633,10 +1633,17 @@ bool ChatHandler::HandleAddItemCommand(char* args)
     if (!ExtractOptInt32(&args, count, 1))
         return false;
 
-    Player* pl = m_session->GetPlayer();
+    Player* pl = m_session ? m_session->GetPlayer() : nullptr;
     Player* plTarget = getSelectedPlayer();
     if (!plTarget)
         plTarget = pl;
+
+    if (!plTarget)
+    {
+        SendSysMessage(LANG_NO_CHAR_SELECTED);
+        SetSentErrorMessage(true);
+        return false;
+    }
 
     DETAIL_LOG(GetMangosString(LANG_ADDITEM), itemId, count);
 
@@ -1682,7 +1689,8 @@ bool ChatHandler::HandleAddItemCommand(char* args)
 
     if (count > 0 && item)
     {
-        pl->SendNewItem(item, count, false, true);
+        if (pl)
+            pl->SendNewItem(item, count, false, true);
         if (pl != plTarget)
             plTarget->SendNewItem(item, count, true, false);
     }
@@ -1707,10 +1715,17 @@ bool ChatHandler::HandleAddItemSetCommand(char* args)
         return false;
     }
 
-    Player* pl = m_session->GetPlayer();
+    Player* pl = m_session ? m_session->GetPlayer() : nullptr;
     Player* plTarget = getSelectedPlayer();
     if (!plTarget)
         plTarget = pl;
+
+    if (!plTarget)
+    {
+        SendSysMessage(LANG_NO_CHAR_SELECTED);
+        SetSentErrorMessage(true);
+        return false;
+    }
 
     DETAIL_LOG(GetMangosString(LANG_ADDITEMSET), itemsetId);
 
@@ -1734,13 +1749,15 @@ bool ChatHandler::HandleAddItemSetCommand(char* args)
                 if (pl == plTarget)
                     item->SetBinding(false);
 
-                pl->SendNewItem(item, 1, false, true);
+                if (pl)
+                    pl->SendNewItem(item, 1, false, true);
                 if (pl != plTarget)
                     plTarget->SendNewItem(item, 1, true, false);
             }
             else
             {
-                pl->SendEquipError(msg, nullptr, nullptr, pProto->ItemId);
+                if (pl)
+                    pl->SendEquipError(msg, nullptr, nullptr, pProto->ItemId);
                 PSendSysMessage(LANG_ITEM_CANNOT_CREATE, pProto->ItemId, 1);
             }
         }
@@ -5456,7 +5473,14 @@ bool ChatHandler::HandleGMFlyCommand(char* args)
 
     Player* target = getSelectedPlayer();
     if (!target)
-        target = m_session->GetPlayer();
+        target = m_session ? m_session->GetPlayer() : nullptr;
+
+    if (!target)
+    {
+        SendSysMessage(LANG_NO_CHAR_SELECTED);
+        SetSentErrorMessage(true);
+        return false;
+    }
 
     // [-ZERO] Need reimplement in another way
     {
@@ -6028,7 +6052,15 @@ bool ChatHandler::HandleCastSelfCommand(char* args)
 bool ChatHandler::HandleInstanceListBindsCommand(char* /*args*/)
 {
     Player* player = getSelectedPlayer();
-    if (!player) player = m_session->GetPlayer();
+    if (!player) player = m_session ? m_session->GetPlayer() : nullptr;
+
+    if (!player)
+    {
+        SendSysMessage(LANG_NO_CHAR_SELECTED);
+        SetSentErrorMessage(true);
+        return false;
+    }
+
     uint32 counter = 0;
 
     Player::BoundInstancesMap& binds = player->GetBoundInstances();
@@ -6081,7 +6113,15 @@ bool ChatHandler::HandleInstanceUnbindCommand(char* args)
 
     Player* player = getSelectedPlayer();
     if (!player)
-        player = m_session->GetPlayer();
+        player = m_session ? m_session->GetPlayer() : nullptr;
+
+    if (!player)
+    {
+        SendSysMessage(LANG_NO_CHAR_SELECTED);
+        SetSentErrorMessage(true);
+        return false;
+    }
+
     uint32 counter = 0;
     uint32 mapid = 0;
     bool got_map = false;

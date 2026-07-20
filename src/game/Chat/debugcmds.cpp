@@ -126,7 +126,14 @@ bool ChatHandler::HandleDebugSendOpcodeCommand(char* /*args*/)
 {
     Unit* unit = getSelectedUnit();
     if (!unit || (unit->GetTypeId() != TYPEID_PLAYER))
-        unit = m_session->GetPlayer();
+        unit = m_session ? m_session->GetPlayer() : nullptr;
+
+    if (!unit)
+    {
+        SendSysMessage(LANG_NO_CHAR_SELECTED);
+        SetSentErrorMessage(true);
+        return false;
+    }
 
     std::ifstream stream("opcode.txt");
     if (!stream.is_open())
@@ -475,7 +482,14 @@ bool ChatHandler::HandleDebugGetItemStateCommand(char* args)
         return false;
 
     Player* player = getSelectedPlayer();
-    if (!player) player = m_session->GetPlayer();
+    if (!player) player = m_session ? m_session->GetPlayer() : nullptr;
+
+    if (!player)
+    {
+        SendSysMessage(LANG_NO_CHAR_SELECTED);
+        SetSentErrorMessage(true);
+        return false;
+    }
 
     if (!list_queue && !check_all)
     {
@@ -1691,7 +1705,14 @@ bool ChatHandler::HandleDebugOutPacketHistory(char* args)
 {
     Player* player = getSelectedPlayer();
     if (player == nullptr)
-        player = m_session->GetPlayer();
+        player = m_session ? m_session->GetPlayer() : nullptr;
+
+    if (!player)
+    {
+        SendSysMessage(LANG_NO_CHAR_SELECTED);
+        SetSentErrorMessage(true);
+        return false;
+    }
 
     auto history = player->GetSession()->GetOutOpcodeHistory();
     std::string output = "Opcodes (reverse order):\n";
@@ -1709,7 +1730,14 @@ bool ChatHandler::HandleDebugIncPacketHistory(char* args)
 {
     Player* player = getSelectedPlayer();
     if (player == nullptr)
-        player = m_session->GetPlayer();
+        player = m_session ? m_session->GetPlayer() : nullptr;
+
+    if (!player)
+    {
+        SendSysMessage(LANG_NO_CHAR_SELECTED);
+        SetSentErrorMessage(true);
+        return false;
+    }
 
     auto history = player->GetSession()->GetIncOpcodeHistory();
     std::string output = "Opcodes (reverse order):\n";

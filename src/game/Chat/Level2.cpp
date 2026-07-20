@@ -2642,12 +2642,19 @@ bool ChatHandler::HandleDeMorphCommand(char* /*args*/)
 {
     Unit* target = getSelectedUnit();
     if (!target)
-        target = m_session->GetPlayer();
+        target = m_session ? m_session->GetPlayer() : nullptr;
 
 
     // check online security
     else if (target->GetTypeId() == TYPEID_PLAYER && HasLowerSecurity((Player*)target))
         return false;
+
+    if (!target)
+    {
+        SendSysMessage(LANG_SELECT_CHAR_OR_CREATURE);
+        SetSentErrorMessage(true);
+        return false;
+    }
 
     target->DeMorph();
 
@@ -2672,11 +2679,18 @@ bool ChatHandler::HandleModifyMorphCommand(char* args)
 
     Unit* target = getSelectedUnit();
     if (!target)
-        target = m_session->GetPlayer();
+        target = m_session ? m_session->GetPlayer() : nullptr;
 
     // check online security
     else if (target->GetTypeId() == TYPEID_PLAYER && HasLowerSecurity((Player*)target))
         return false;
+
+    if (!target)
+    {
+        SendSysMessage(LANG_SELECT_CHAR_OR_CREATURE);
+        SetSentErrorMessage(true);
+        return false;
+    }
 
     target->SetDisplayId(display_id);
 
@@ -3684,7 +3698,14 @@ bool ChatHandler::HandleHonorShow(char* /*args*/)
 {
     Player* target = getSelectedPlayer();
     if (!target)
-        target = m_session->GetPlayer();
+        target = m_session ? m_session->GetPlayer() : nullptr;
+
+    if (!target)
+    {
+        SendSysMessage(LANG_NO_CHAR_SELECTED);
+        SetSentErrorMessage(true);
+        return false;
+    }
 
     int8 highest_rank               = target->GetHonorHighestRankInfo().visualRank;
     uint32 dishonorable_kills       = target->GetUInt32Value(PLAYER_FIELD_LIFETIME_DISHONORABLE_KILLS);
